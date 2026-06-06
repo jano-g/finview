@@ -17,6 +17,13 @@ export default function Rules() {
     load();
   };
 
+  const reapply = async () => {
+    setBusy(true);
+    await fetch('/api/recategorize', { method: 'POST' });
+    setBusy(false);
+    load();
+  };
+
   const typeLabel: Record<string, string> = { iban: 'IBAN', vs: 'Var. symbol', text: 'Text contains' };
 
   return (
@@ -24,7 +31,10 @@ export default function Rules() {
       <div className="card">
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h2>Categorization rules</h2>
-          <a href="/review" style={{ color: 'var(--accent-2)', fontSize: '0.88rem' }}>← Back to review</a>
+          <div className="row">
+            <button disabled={busy} onClick={reapply}>{busy ? 'Working…' : 'Re-apply all rules'}</button>
+            <a href="/review" style={{ color: 'var(--accent-2)', fontSize: '0.88rem' }}>← Back to review</a>
+          </div>
         </div>
         <div className="notice section-gap">
           Deleting a rule re-runs categorization. Transactions it had matched (and aren't manually set) return to their default — often Uncategorized. Seed rules can be deleted too; they come back only on a fresh database.

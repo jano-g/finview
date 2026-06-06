@@ -7,14 +7,18 @@ const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const DB_PATH = path.join(DATA_DIR, 'finance.db');
 
-let _db: Database.Database | null = null;
+// Use a global singleton so every API route shares ONE connection.
+// Without this, Next.js can instantiate multiple modules -> multiple
+// SQLite connections -> writes from one not visible to reads from another.
+const g = globalThis as unknown as { __finviewDb?: Database.Database };
 
 export function db(): Database.Database {
-  if (_db) return _db;
-  _db = new Database(DB_PATH);
-  _db.pragma('journal_mode = WAL');
-  init(_db);
-  return _db;
+  if (g.__finviewDb) return g.__finviewDb;
+  const conn = new Database(DB_PATH);
+  conn.pragma('journal_mode = WAL');
+  init(conn);
+  g.__finviewDb = conn;
+  return conn;
 }
 
 function init(d: Database.Database) {
