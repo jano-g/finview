@@ -23,7 +23,12 @@ export async function POST(req: NextRequest) {
     'INSERT INTO rules(match_type, match_value, account, category, note, user_created) VALUES (?,?,?,?,?,1)'
   ).run(match_type, match_value, account || null, category, 'learned from review');
 
-  recategorizeAll();
+  try {
+    recategorizeAll();
+  } catch (e) {
+    console.error('recategorizeAll failed:', e);
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
 

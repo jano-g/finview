@@ -20,7 +20,7 @@ export interface Categorized extends ParsedTx {
   auto_categorized: boolean;
 }
 
-function loadRules(): RuleRow[] {
+export function loadRules(): RuleRow[] {
   return db()
     .prepare('SELECT match_type, match_value, account, category FROM rules')
     .all() as RuleRow[];
@@ -78,7 +78,7 @@ function refine(tx: ParsedTx, category: string): string {
   return category;
 }
 
-export function categorize(tx: ParsedTx): Categorized {
+export function categorize(tx: ParsedTx, rules?: RuleRow[]): Categorized {
   const internal = detectInternal(tx);
 
   if (internal) {
@@ -93,8 +93,8 @@ export function categorize(tx: ParsedTx): Categorized {
     }
   }
 
-  const rules = loadRules();
-  const matched = applyRules(tx, rules);
+  const activeRules = rules ?? loadRules();
+  const matched = applyRules(tx, activeRules);
   if (matched) {
     return { ...tx, category: matched, is_internal: false, auto_categorized: true };
   }
@@ -108,13 +108,15 @@ export function categorize(tx: ParsedTx): Categorized {
 }
 
 // Re-run categorization across all stored transactions (after new rule added).
+// Rules are loaded once before the write transaction to avoid nested DB calls.
 export function recategorizeAll() {
   const d = db();
+  const rules = loadRules();
   const rows = d.prepare('SELECT * FROM transactions').all() as any[];
   const upd = d.prepare(
     'UPDATE transactions SET category=?, is_internal=?, auto_categorized=? WHERE id=?'
   );
-  const tx = d.transaction((items: any[]) => {
+  const runBatch = d.transaction((items: any[]) => {
     for (const r of items) {
       // don't override user manual categorization (auto_categorized=0 AND not Uncategorized)
       const isManual = r.auto_categorized === 0 && r.category !== 'Uncategorized';
@@ -130,9 +132,9 @@ export function recategorizeAll() {
         amount: r.amount,
         currency: r.currency,
         raw: r.raw,
-      });
+      }, rules);
       upd.run(c.category, c.is_internal ? 1 : 0, c.auto_categorized ? 1 : 0, r.id);
     }
   });
-  tx(rows);
+  runBatch(rows);
 }
