@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 const eur = (n: number) =>
   new Intl.NumberFormat('sk-SK', { style: 'currency', currency: 'EUR' }).format(n || 0);
 
-// Guess a useful keyword from a messy Revolut/Tatra description.
-// Skips boilerplate tokens and prefers a meaningful merchant word.
 function guessKeyword(desc: string): string {
   const STOP = new Set([
     'eur','usd','nakup','nákup','pos','int','gordulič','gordulic','jan','ján',
@@ -22,6 +20,8 @@ function guessKeyword(desc: string): string {
   return (caps || cleaned[0] || desc || '').slice(0, 40);
 }
 
+type SortCol = 'date' | 'description' | 'amount';
+
 export default function Review() {
   const [rows, setRows] = useState<any[]>([]);
   const [cats, setCats] = useState<string[]>([]);
@@ -29,11 +29,18 @@ export default function Review() {
   const [q, setQ] = useState('');
   const [newCat, setNewCat] = useState('');
   const [staged, setStaged] = useState<Record<string, string>>({});
-  // when set, we are confirming a text-rule keyword for a transaction
   const [ruleModal, setRuleModal] = useState<{ tx: any; keyword: string; category: string } | null>(null);
 
+  const [sortBy, setSortBy] = useState<SortCol>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkCat, setBulkCat] = useState('');
+
   const loadCats = useCallback(() => {
-    fetch('/api/categories').then((r) => r.json()).then((j) => setCats(j.categories));
+    fetch('/api/categories').then((r) => r.json()).then((j) => {
+      setCats(j.categories);
+      if (!bulkCat && j.categories.length) setBulkCat(j.categories[0]);
+    });
   }, []);
 
   const loadRows = useCallback(() => {
@@ -43,6 +50,7 @@ export default function Review() {
     if (q) url += '&q=' + encodeURIComponent(q);
     fetch(url).then((r) => r.json()).then((j) => {
       setRows(j.rows);
+      setSelected(new Set());
       const init: Record<string, string> = {};
       j.rows.forEach((r: any) => { init[r.id] = r.category; });
       setStaged(init);
@@ -51,6 +59,27 @@ export default function Review() {
 
   useEffect(() => { loadCats(); }, [loadCats]);
   useEffect(() => { loadRows(); }, [loadRows]);
+
+  const toggleSort = (col: SortCol) => {
+    if (sortBy === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortBy(col); setSortDir(col === 'amount' ? 'asc' : 'asc'); }
+  };
+
+  const arrow = (col: SortCol) => sortBy === col ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '';
+
+  const sorted = [...rows].sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === 'date') cmp = a.date.localeCompare(b.date);
+    else if (sortBy === 'description') cmp = (a.description || '').localeCompare(b.description || '');
+    else if (sortBy === 'amount') cmp = a.amount - b.amount;
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const toggleOne = (id: string) =>
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const allSelected = rows.length > 0 && selected.size === rows.length;
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)));
 
   const applyOne = async (tx: any) => {
     const category = staged[tx.id] || tx.category;
@@ -61,7 +90,15 @@ export default function Review() {
     loadRows();
   };
 
-  // Decide how to build a rule. IBAN/VS apply instantly; text opens a confirm modal.
+  const applyBulk = async () => {
+    if (!bulkCat || selected.size === 0) return;
+    await fetch('/api/transactions', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [...selected], category: bulkCat }),
+    });
+    loadRows();
+  };
+
   const startRule = (tx: any) => {
     const category = staged[tx.id] || tx.category;
     if (tx.counterparty_iban) return createRule(tx, 'iban', tx.counterparty_iban, category);
@@ -99,6 +136,8 @@ export default function Review() {
 
   const vkladTotal = filter === 'vklad' ? rows.reduce((s, r) => s + r.amount, 0) : 0;
 
+  const thStyle: React.CSSProperties = { cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' };
+
   return (
     <div className="grid" style={{ gap: 18 }}>
       <div className="card">
@@ -122,16 +161,40 @@ export default function Review() {
         <div className="notice section-gap">
           Pick a category, then <b>Apply</b> (just this one) or <b>+ rule</b> (this one and all similar). For card payments you'll confirm which keyword to match.
         </div>
+
+        {selected.size > 0 && (
+          <div className="row section-gap" style={{ background: 'var(--surface-2, #1e2130)', borderRadius: 8, padding: '10px 14px', gap: 12 }}>
+            <span className="muted" style={{ fontSize: '0.88rem' }}><b style={{ color: 'var(--text)' }}>{selected.size}</b> selected</span>
+            <select value={bulkCat} onChange={(e) => setBulkCat(e.target.value)} style={{ flex: 1, maxWidth: 260 }}>
+              {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button onClick={applyBulk}>Apply to {selected.size}</button>
+            <button className="ghost" onClick={() => setSelected(new Set())}>Clear</button>
+          </div>
+        )}
       </div>
 
       <div className="card">
         <table>
           <thead>
-            <tr><th>Date</th><th>Account</th><th>Description</th><th style={{ textAlign: 'right' }}>Amount</th><th>Category</th><th>Action</th></tr>
+            <tr>
+              <th style={{ width: 32 }}>
+                <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+              </th>
+              <th style={thStyle} onClick={() => toggleSort('date')}>Date{arrow('date')}</th>
+              <th>Account</th>
+              <th style={thStyle} onClick={() => toggleSort('description')}>Description{arrow('description')}</th>
+              <th style={{ ...thStyle, textAlign: 'right' }} onClick={() => toggleSort('amount')}>Amount{arrow('amount')}</th>
+              <th>Category</th>
+              <th>Action</th>
+            </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
+            {sorted.map((r) => (
+              <tr key={r.id} style={selected.has(r.id) ? { background: 'rgba(99,102,241,0.08)' } : undefined}>
+                <td>
+                  <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleOne(r.id)} />
+                </td>
                 <td className="muted">{r.date}</td>
                 <td><span className="pill">{r.account}</span></td>
                 <td style={{ maxWidth: 320 }}>{r.description}</td>
@@ -151,7 +214,7 @@ export default function Review() {
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: 30 }}>
+              <tr><td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 30 }}>
                 Nothing here {filter === 'uncategorized' ? '- all categorized!' : ''}
               </td></tr>
             )}

@@ -25,11 +25,24 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ rows });
 }
 
-// Update a single transaction's category (manual override)
+// Update one or many transactions' category (manual override).
+// Single: { id, category }   Bulk: { ids: string[], category }
 export async function PATCH(req: NextRequest) {
-  const { id, category } = await req.json();
-  if (!id || !category) return NextResponse.json({ error: 'id and category required' }, { status: 400 });
+  const body = await req.json();
   const d = db();
+
+  if (body.ids) {
+    const { ids, category } = body;
+    if (!Array.isArray(ids) || !ids.length || !category)
+      return NextResponse.json({ error: 'ids and category required' }, { status: 400 });
+    const upd = d.prepare('UPDATE transactions SET category=?, auto_categorized=0 WHERE id=?');
+    const batch = d.transaction((items: string[]) => { for (const id of items) upd.run(category, id); });
+    batch(ids);
+    return NextResponse.json({ ok: true, updated: ids.length });
+  }
+
+  const { id, category } = body;
+  if (!id || !category) return NextResponse.json({ error: 'id and category required' }, { status: 400 });
   d.prepare('UPDATE transactions SET category=?, auto_categorized=0 WHERE id=?').run(category, id);
   return NextResponse.json({ ok: true });
 }
