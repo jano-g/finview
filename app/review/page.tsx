@@ -35,6 +35,9 @@ export default function Review() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkCat, setBulkCat] = useState('');
+  const [renameModal, setRenameModal] = useState(false);
+  const [renameFrom, setRenameFrom] = useState('');
+  const [renameTo, setRenameTo] = useState('');
 
   const loadCats = useCallback(() => {
     fetch('/api/categories').then((r) => r.json()).then((j) => {
@@ -128,6 +131,23 @@ export default function Review() {
     setNewCat(''); loadCats();
   };
 
+  const openRename = () => {
+    setRenameFrom(cats[0] || '');
+    setRenameTo('');
+    setRenameModal(true);
+  };
+
+  const renameCategory = async () => {
+    if (!renameFrom || !renameTo.trim() || renameFrom === renameTo.trim()) return;
+    await fetch('/api/categories', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: renameFrom, to: renameTo.trim() }),
+    });
+    setRenameModal(false);
+    loadCats();
+    loadRows();
+  };
+
   const ruleHint = (tx: any) => {
     if (tx.counterparty_iban) return `all to IBAN ...${tx.counterparty_iban.slice(-6)}`;
     if (tx.variable_symbol) return `all with VS ${tx.variable_symbol}`;
@@ -156,6 +176,7 @@ export default function Review() {
         <div className="row section-gap">
           <input type="text" placeholder="New category name..." value={newCat} onChange={(e) => setNewCat(e.target.value)} />
           <button className="ghost" onClick={addCategory}>+ Add category</button>
+          <button className="ghost" onClick={openRename}>Rename category</button>
           <a href="/rules" style={{ marginLeft: 'auto', color: 'var(--accent-2)', fontSize: '0.88rem' }}>Manage rules →</a>
         </div>
         <div className="notice section-gap">
@@ -221,6 +242,29 @@ export default function Review() {
           </tbody>
         </table>
       </div>
+
+      {renameModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}
+          onClick={() => setRenameModal(false)}>
+          <div className="card" style={{ maxWidth: 440, width: '90%' }} onClick={(e) => e.stopPropagation()}>
+            <h2>Rename category</h2>
+            <p className="muted" style={{ marginBottom: 14 }}>Updates all transactions and rules that use this category.</p>
+            <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>Rename from</label>
+            <select value={renameFrom} onChange={(e) => setRenameFrom(e.target.value)} style={{ width: '100%', marginBottom: 14 }}>
+              {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: 'var(--muted)' }}>New name</label>
+            <input type="text" value={renameTo} onChange={(e) => setRenameTo(e.target.value)}
+              style={{ width: '100%', marginBottom: 18 }} placeholder="New category name..." autoFocus />
+            <div className="row" style={{ justifyContent: 'flex-end' }}>
+              <button className="ghost" onClick={() => setRenameModal(false)}>Cancel</button>
+              <button disabled={!renameTo.trim() || renameTo.trim() === renameFrom} onClick={renameCategory}>
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {ruleModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}

@@ -16,3 +16,16 @@ export async function POST(req: NextRequest) {
   db().prepare('INSERT OR IGNORE INTO categories(name) VALUES (?)').run(name.trim());
   return NextResponse.json({ ok: true });
 }
+
+// Rename a category everywhere: categories table, transactions, rules.
+export async function PATCH(req: NextRequest) {
+  const { from, to } = await req.json();
+  if (!from?.trim() || !to?.trim()) return NextResponse.json({ error: 'from and to required' }, { status: 400 });
+  const d = db();
+  d.transaction(() => {
+    d.prepare('UPDATE categories SET name=? WHERE name=?').run(to.trim(), from.trim());
+    d.prepare('UPDATE transactions SET category=? WHERE category=?').run(to.trim(), from.trim());
+    d.prepare('UPDATE rules SET category=? WHERE category=?').run(to.trim(), from.trim());
+  })();
+  return NextResponse.json({ ok: true });
+}
