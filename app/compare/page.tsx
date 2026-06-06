@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
+import { CHART, tooltipStyle } from '@/lib/chartTheme';
 
 const eur = (n: number) =>
   new Intl.NumberFormat('sk-SK', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0);
@@ -71,11 +72,10 @@ export default function Compare() {
         <h2>Category comparison</h2>
         <ResponsiveContainer width="100%" height={Math.max(320, chartData.length * 34)}>
           <BarChart data={chartData} layout="vertical" margin={{ left: 40 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2a323d" horizontal={false} />
-            <XAxis type="number" stroke="#8b949e" fontSize={11} tickFormatter={(v) => `€${v}`} />
-            <YAxis type="category" dataKey="category" stroke="#8b949e" fontSize={11} width={130} />
-            <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #2a323d', borderRadius: 8 }}
-              formatter={(v: number) => eur(v)} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} horizontal={false} />
+            <XAxis type="number" stroke={CHART.axis} fontSize={11} tickFormatter={(v) => `€${v}`} />
+            <YAxis type="category" dataKey="category" stroke={CHART.axis} fontSize={11} width={130} />
+            <Tooltip {...tooltipStyle} formatter={(v: number) => eur(v)} />
             <Legend />
             <Bar dataKey={a} fill="#38bdf8" radius={[0, 4, 4, 0]} />
             <Bar dataKey={b} fill="#4ade80" radius={[0, 4, 4, 0]} />

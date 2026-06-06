@@ -24,6 +24,8 @@ explore spending through charts and month-to-month comparisons.
 | **Sort** | Click any column header (Date, Description, Amount) to sort; click again to reverse |
 | **Rules management** | View, create, and delete rules; re-apply all rules with one button |
 | **Rename categories** | Rename a category and have it update everywhere — transactions and rules — atomically |
+| **Analytics** | Monthly / yearly / all-time breakdown by category *or* group, spending or income, with a net-cashflow trend line and click-to-drill-down |
+| **Category groups** | Roll related categories together (all apartments, all utilities, all investment) — auto from naming + custom groups |
 | **Compare** | Side-by-side breakdown of any two months by category |
 | **Seed export** | Export your custom categories and rules as code ready to paste into `lib/rules.ts` |
 
@@ -36,6 +38,22 @@ explore spending through charts and month-to-month comparisons.
 - Summary tiles: total income, total spending, VKLAD cash deposits, internal transfers
 - Monthly spending bar chart (Recharts)
 - Per-category spending breakdown for any selected month
+
+### Analytics (`/analytics`)
+A flexible breakdown view. Three toggles plus a period picker:
+
+- **Period:** `Monthly` · `Yearly` · `All-time` (with a dropdown to pick the specific month/year)
+- **View:** `By group` (rolls related categories up) · `By category`
+- **Direction:** `Spending` · `Income`
+
+Shows a horizontal bar chart of the top entries, a **net-cashflow trend line** (per-period net and cumulative), and a breakdown table with transaction count, % share, and total. In group view, click a group row to **expand** its member categories; click any row to **drill down** to the underlying transactions in Review.
+
+Answers questions like *"how much on all apartments this year"* (Yearly + By group), *"mortgage per year"*, or *"how much did I invest"*.
+
+**Category groups** are defined in `lib/groups.ts`:
+- **Auto:** any category named `Prefix - Detail` groups by its prefix (`Apartment - …` → **Apartment**).
+- **Custom:** `CUSTOM_GROUPS` lets you hand-build cross-cutting groups (e.g. all housing costs).
+- Groups operate on whole categories — to isolate something inside a category (e.g. electricity within `Utilities - Belá`), first give it its own category via a rule.
 
 ### Review (`/review`)
 Three views toggled by tabs:
@@ -51,7 +69,9 @@ Three views toggled by tabs:
 2. Click **Apply** to save just that row, or
 3. Click **+ rule** to save the row *and* create a rule that auto-applies to matching transactions
 
-For card payments (no IBAN or variable symbol) the rule dialog lets you confirm or edit the keyword that will be matched.
+Each row shows the counterparty **IBAN** (truncated, full on hover) and **variable symbol** when present, so you can see what `+ rule` will match on: an IBAN rule, a VS rule, or — for card payments with neither — a description-keyword rule (which opens a dialog to confirm/edit the keyword).
+
+**Drill-down filter:** opening Review with `?category=<name>` (and optionally `&month=<yyyy-mm>`) in the URL filters to that category — this is how the Dashboard and Analytics pages link in. A banner shows the active filter with a **Clear filter** button.
 
 **Bulk categorization:**
 1. Tick checkboxes on one or more rows (header checkbox selects all)
@@ -152,6 +172,10 @@ Aggregated figures for the dashboard and compare page.
 **Params:** `?month=yyyy-mm` (optional) — if omitted returns all-time totals  
 **Response:** `{ income, spending, vklad, internal, byCategory: [{category, total}] }`
 
+### `GET /api/analytics`
+Per-month, per-category spend & income (internal excluded). The Analytics page aggregates this client-side into Month/Year/All × Category/Group × Spending/Income.  
+**Response:** `{ rows: [{ month, category, spend, income, n }], months: string[] }`
+
 ### `GET /api/transactions`
 List transactions with optional filters.
 
@@ -211,12 +235,14 @@ finview/
 │   ├── layout.tsx                    # Root layout, nav bar
 │   ├── globals.css                   # Dark financial UI theme
 │   ├── page.tsx                      # Dashboard
-│   ├── review/page.tsx               # Review inbox (sort, bulk, rename)
+│   ├── analytics/page.tsx            # Analytics (period/group/direction breakdown + trend)
+│   ├── review/page.tsx               # Review inbox (sort, bulk, rename, IBAN/VS, drill-down)
 │   ├── rules/page.tsx                # Rules management
 │   ├── compare/page.tsx              # Month comparison
 │   └── api/
 │       ├── upload/route.ts           # Parse + dedup + categorize + store
 │       ├── stats/route.ts            # Aggregations
+│       ├── analytics/route.ts        # Per-month per-category spend & income
 │       ├── transactions/route.ts     # List + single/bulk PATCH
 │       ├── categories/route.ts       # List + add + rename
 │       ├── rules/route.ts            # List + create + delete + recategorize
@@ -227,6 +253,8 @@ finview/
 │   │   ├── revolut.ts               # Revolut CSV/XLSX → ParsedTx[]
 │   │   └── tatra.ts                 # Tatra CSV → ParsedTx[] (Slovak formats, VS as string)
 │   ├── rules.ts                     # SEED_CATEGORIES, SEED_RULES, internal config
+│   ├── groups.ts                    # Category grouping for Analytics (auto + custom)
+│   ├── chartTheme.ts                # Shared Recharts colors + readable tooltip styles
 │   ├── categorize.ts                # Rule engine: categorize(), recategorizeAll()
 │   ├── db.ts                        # SQLite singleton, schema, seeding
 │   └── types.ts                     # ParsedTx type

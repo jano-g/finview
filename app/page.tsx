@@ -1,16 +1,19 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
+import { CHART, tooltipStyle, PALETTE } from '@/lib/chartTheme';
 
 const eur = (n: number) =>
   new Intl.NumberFormat('sk-SK', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n || 0);
 
-const PIE = ['#4ade80', '#38bdf8', '#fbbf24', '#f87171', '#a78bfa', '#fb923c', '#34d399', '#60a5fa', '#f472b6', '#94a3b8'];
+const PIE = PALETTE;
 
 export default function Dashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState<any>(null);
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -109,11 +112,10 @@ export default function Dashboard() {
           <h2>Income vs Spending by month</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a323d" vertical={false} />
-              <XAxis dataKey="month" stroke="#8b949e" fontSize={11} />
-              <YAxis stroke="#8b949e" fontSize={11} tickFormatter={(v) => `€${v / 1000}k`} />
-              <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #2a323d', borderRadius: 8 }}
-                formatter={(v: number) => eur(v)} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+              <XAxis dataKey="month" stroke={CHART.axis} fontSize={11} />
+              <YAxis stroke={CHART.axis} fontSize={11} tickFormatter={(v) => `€${v / 1000}k`} />
+              <Tooltip {...tooltipStyle} formatter={(v: number) => eur(v)} />
               <Legend />
               <Bar dataKey="income" fill="#4ade80" radius={[4, 4, 0, 0]} />
               <Bar dataKey="spend" fill="#f87171" radius={[4, 4, 0, 0]} />
@@ -128,8 +130,8 @@ export default function Dashboard() {
                 innerRadius={55} outerRadius={95} paddingAngle={2}>
                 {pieData.map((_: any, i: number) => <Cell key={i} fill={PIE[i % PIE.length]} />)}
               </Pie>
-              <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #2a323d', borderRadius: 8 }}
-                formatter={(v: number) => eur(v)} />
+              <Tooltip {...tooltipStyle} formatter={(v: number) => eur(v)} />
+              <Legend formatter={(value) => <span style={{ color: CHART.text, fontSize: 12 }}>{value}</span>} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -140,11 +142,10 @@ export default function Dashboard() {
         <h2>💰 VKLAD deposits by month</h2>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={(stats?.vkladByMonth || []).map((v: any) => ({ month: v.month, total: Math.round(v.total) }))}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2a323d" vertical={false} />
-            <XAxis dataKey="month" stroke="#8b949e" fontSize={11} />
-            <YAxis stroke="#8b949e" fontSize={11} tickFormatter={(v) => `€${v / 1000}k`} />
-            <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #2a323d', borderRadius: 8 }}
-              formatter={(v: number) => eur(v)} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+            <XAxis dataKey="month" stroke={CHART.axis} fontSize={11} />
+            <YAxis stroke={CHART.axis} fontSize={11} tickFormatter={(v) => `€${v / 1000}k`} />
+            <Tooltip {...tooltipStyle} formatter={(v: number) => eur(v)} />
             <Bar dataKey="total" fill="#34d399" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -157,7 +158,8 @@ export default function Dashboard() {
           <thead><tr><th>Category</th><th>Transactions</th><th style={{ textAlign: 'right' }}>Total spent</th></tr></thead>
           <tbody>
             {(stats?.byCategory || []).map((c: any) => (
-              <tr key={c.category}>
+              <tr key={c.category} style={{ cursor: 'pointer' }}
+                onClick={() => router.push('/review?category=' + encodeURIComponent(c.category))}>
                 <td>{c.category}</td>
                 <td>{c.n}</td>
                 <td className="num">{eur(c.total)}</td>

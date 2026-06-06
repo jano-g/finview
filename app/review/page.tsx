@@ -38,6 +38,18 @@ export default function Review() {
   const [renameModal, setRenameModal] = useState(false);
   const [renameFrom, setRenameFrom] = useState('');
   const [renameTo, setRenameTo] = useState('');
+  // Drill-down filter from URL (?category=...&month=...)
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+
+  // Read drill-down params on mount.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const cat = sp.get('category');
+    const mon = sp.get('month');
+    if (cat) { setCategoryFilter(cat); setFilter('all'); }
+    if (mon) setMonthFilter(mon);
+  }, []);
 
   const loadCats = useCallback(() => {
     fetch('/api/categories').then((r) => r.json()).then((j) => {
@@ -48,8 +60,13 @@ export default function Review() {
 
   const loadRows = useCallback(() => {
     let url = '/api/transactions?limit=500';
-    if (filter === 'uncategorized') url += '&uncategorized=1';
-    if (filter === 'vklad') url += '&category=' + encodeURIComponent('Income - business (vklad)');
+    if (categoryFilter) {
+      url += '&category=' + encodeURIComponent(categoryFilter);
+      if (monthFilter) url += '&month=' + encodeURIComponent(monthFilter);
+    } else {
+      if (filter === 'uncategorized') url += '&uncategorized=1';
+      if (filter === 'vklad') url += '&category=' + encodeURIComponent('Income - business (vklad)');
+    }
     if (q) url += '&q=' + encodeURIComponent(q);
     fetch(url).then((r) => r.json()).then((j) => {
       setRows(j.rows);
@@ -58,7 +75,9 @@ export default function Review() {
       j.rows.forEach((r: any) => { init[r.id] = r.category; });
       setStaged(init);
     });
-  }, [filter, q]);
+  }, [filter, q, categoryFilter, monthFilter]);
+
+  const clearDrilldown = () => { setCategoryFilter(''); setMonthFilter(''); };
 
   useEffect(() => { loadCats(); }, [loadCats]);
   useEffect(() => { loadRows(); }, [loadRows]);
@@ -163,13 +182,19 @@ export default function Review() {
       <div className="card">
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <div className="row">
-            <button className={filter === 'uncategorized' ? '' : 'ghost'} onClick={() => setFilter('uncategorized')}>Needs review</button>
-            <button className={filter === 'vklad' ? '' : 'ghost'} onClick={() => setFilter('vklad')}>VKLAD deposits</button>
-            <button className={filter === 'all' ? '' : 'ghost'} onClick={() => setFilter('all')}>All</button>
+            <button className={!categoryFilter && filter === 'uncategorized' ? '' : 'ghost'} onClick={() => { clearDrilldown(); setFilter('uncategorized'); }}>Needs review</button>
+            <button className={!categoryFilter && filter === 'vklad' ? '' : 'ghost'} onClick={() => { clearDrilldown(); setFilter('vklad'); }}>VKLAD deposits</button>
+            <button className={!categoryFilter && filter === 'all' ? '' : 'ghost'} onClick={() => { clearDrilldown(); setFilter('all'); }}>All</button>
           </div>
           <input type="text" placeholder="Search description..." value={q}
             onChange={(e) => setQ(e.target.value)} style={{ minWidth: 220 }} />
         </div>
+        {categoryFilter && (
+          <div className="notice section-gap row" style={{ justifyContent: 'space-between' }}>
+            <span>Showing <b>{categoryFilter}</b>{monthFilter ? <> in <b>{monthFilter}</b></> : ''} · <b>{rows.length}</b> transactions</span>
+            <button className="ghost" onClick={clearDrilldown}>Clear filter</button>
+          </div>
+        )}
         {filter === 'vklad' && (
           <div className="notice section-gap"><b>{rows.length}</b> cash deposits · total <b className="pos">{eur(vkladTotal)}</b></div>
         )}
@@ -218,7 +243,21 @@ export default function Review() {
                 </td>
                 <td className="muted">{r.date}</td>
                 <td><span className="pill">{r.account}</span></td>
-                <td style={{ maxWidth: 320 }}>{r.description}</td>
+                <td style={{ maxWidth: 320 }}>
+                  {r.description}
+                  {(r.counterparty_iban || r.variable_symbol) && (
+                    <div style={{ marginTop: 4, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {r.counterparty_iban && (
+                        <span className="pill" title={r.counterparty_iban} style={{ fontFamily: 'var(--mono)' }}>
+                          IBAN ··{r.counterparty_iban.slice(-6)}
+                        </span>
+                      )}
+                      {r.variable_symbol && (
+                        <span className="pill" style={{ fontFamily: 'var(--mono)' }}>VS {r.variable_symbol}</span>
+                      )}
+                    </div>
+                  )}
+                </td>
                 <td className={'num ' + (r.amount < 0 ? 'neg' : 'pos')}>{eur(r.amount)}</td>
                 <td>
                   <select value={staged[r.id] ?? r.category}
