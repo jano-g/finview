@@ -1,6 +1,6 @@
-// All categorization knowledge derived from Jan's accounts.
-// Matching priority: variable symbol > IBAN > merchant/description text.
-// Edit freely — but the app also learns new rules from the Review inbox.
+// FinView categorization rules.
+// Matching priority: variable symbol > IBAN > merchant text.
+// Edit here to match your own accounts, or create rules live in the Review tab.
 
 export interface SeedRule {
   match:
@@ -17,18 +17,17 @@ export interface SeedRule {
 export const SEED_CATEGORIES: string[] = [
   'Belá',
   'Utilities - Belá',
-  'Utilities - Gorkého byt',
-  'Utilities - Gorkého garzónka',
-  'Utilities - Slnečnice',
-  'Apartment - Gorkého byt',
-  'Apartment - Gorkého garzónka',
-  'Apartment - Slnečnice (Mama)',
-  'Apartment - Mestská (sold)',
+  'Utilities - Apartment 1',
+  'Utilities - Apartment 2',
+  'Utilities - Apartment 3',
+  'Apartment - 1',
+  'Apartment - 2',
+  'Apartment - 3',
   'Insurance',
   'Investment - mine',
-  'Investment - Eliška',
-  'Family - Mama (MATI)',
-  'Lucia',
+  'Investment - savings',
+  'Family',
+  'Partner',
   'Porn',
   'Food & Groceries',
   'Transport',
@@ -44,55 +43,51 @@ export const SEED_CATEGORIES: string[] = [
 ];
 
 // ---- Seed rules ----
+// Replace the placeholder IBANs below with your real account numbers.
 export const SEED_RULES: SeedRule[] = [
-  // ===== BELÁ (everything Belá → one category) =====
-  { match: { type: 'iban', value: 'SK1111000000002618510650' }, category: 'Belá', note: 'Ignác Tóth - repairs' },
-  { match: { type: 'iban', value: 'SK2856000000004985799002' }, category: 'Belá', note: 'Ildikó - cleaning' },
-  { match: { type: 'iban', value: 'SK2511110000001272729000' }, category: 'Belá', note: 'Jozef Matyó - gardener' },
-  { match: { type: 'iban', value: 'SK2009000000000233888565' }, category: 'Belá', note: 'Voda Belá - Západoslovenská vodárenská' },
-  { match: { type: 'text', value: 'zuzana franova' }, category: 'Belá', note: 'cleaning lady' },
-  { match: { type: 'text', value: 'franová' }, category: 'Belá', note: 'cleaning lady' },
+
+  // ===== PROPERTY / SUMMER HOUSE =====
+  // Add IBANs for people/services you pay regularly for your property:
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Belá', note: 'repairs' },
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Belá', note: 'cleaning' },
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Belá', note: 'gardener' },
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Belá', note: 'water utility' },
 
   // ===== UTILITIES per property (matched by variable symbol) =====
-  { match: { type: 'vs', value: '6310803049' }, category: 'Utilities - Belá' },
-  { match: { type: 'vs', value: '6310523837' }, category: 'Utilities - Gorkého byt' },
-  { match: { type: 'vs', value: '6310871487' }, category: 'Utilities - Gorkého garzónka' },
-  { match: { type: 'vs', value: '6310871495' }, category: 'Utilities - Slnečnice' },
-  // ZSE electricity (general)
-  { match: { type: 'iban', value: 'SK5281300000002000260100' }, category: 'Utilities - Belá', note: 'ZSE electricity (fallback)' },
+  // { match: { type: 'vs', value: '6310803049' }, category: 'Utilities - Belá' },
+  // { match: { type: 'vs', value: '6310523837' }, category: 'Utilities - Apartment 1' },
+  // { match: { type: 'vs', value: '6310871487' }, category: 'Utilities - Apartment 2' },
+  // { match: { type: 'vs', value: '6310871495' }, category: 'Utilities - Apartment 3' },
+  // ZSE / electricity fallback by IBAN:
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Utilities - Belá', note: 'electricity' },
 
-  // ===== APARTMENTS (blahobyt = one IBAN, split by variable symbol) =====
-  { match: { type: 'vs', value: '1340060070' }, category: 'Apartment - Gorkého byt', note: 'blahobyt' },
-  { match: { type: 'vs', value: '1340060040' }, category: 'Apartment - Gorkého garzónka', note: 'blahobyt' },
-  { match: { type: 'vs', value: '3160020090' }, category: 'Apartment - Mestská (sold)', note: 'blahobyt - sold last year' },
-  // hprobyt = Mama / Slnečnice apartment
-  { match: { type: 'iban', value: 'SK2011000000002926890851' }, category: 'Apartment - Slnečnice (Mama)', note: 'hprobyt / správa Slnečnice' },
+  // ===== APARTMENTS (split by variable symbol if same IBAN) =====
+  // { match: { type: 'vs', value: '...' }, category: 'Apartment - 1', note: 'management company' },
+  // { match: { type: 'vs', value: '...' }, category: 'Apartment - 2', note: 'management company' },
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Apartment - 3', note: 'management company' },
 
   // ===== INSURANCE =====
-  { match: { type: 'iban', value: 'SK8411000000002623828137' }, category: 'Insurance', note: 'UNIQA - gorkého byt + garzónka' },
-  { match: { type: 'iban', value: 'SK9765000000000020135711' }, category: 'Insurance', note: 'Allianz SP' },
-  { match: { type: 'vs', value: '5900853374' }, category: 'Insurance', note: 'insurance - Gorkého garzónka' },
+  { match: { type: 'iban', value: 'SK8411000000002623828137' }, category: 'Insurance', note: 'UNIQA' },
+  { match: { type: 'iban', value: 'SK9765000000000020135711' }, category: 'Insurance', note: 'Allianz' },
+  // { match: { type: 'vs', value: '...' }, category: 'Insurance' },
 
-  // ===== ELIŠKA =====
-  { match: { type: 'text', value: 'eliska gordulic' }, category: 'Investment - Eliška', note: '208 EUR payment' },
-
-  // ===== MORTGAGE / LOANS (SPLATKA ISTINY / UROKU). Over 50k handled as internal in code. =====
+  // ===== MORTGAGE / LOANS =====
   { match: { type: 'text', value: 'splatka istiny' }, category: 'Mortgage / Loans' },
   { match: { type: 'text', value: 'splatka uroku' }, category: 'Mortgage / Loans' },
   { match: { type: 'text', value: 'splátka' }, category: 'Mortgage / Loans' },
 
   // ===== INVESTMENT =====
-  { match: { type: 'iban', value: 'SK7483300000007678876788' }, category: 'Investment - mine', note: 'Investícia / Eliška sporenie - same IBAN, refined below' },
-  // (Eliška vs mine share an IBAN; split is handled in categorize.ts by amount/reference)
+  // If two purposes share one IBAN, use the iban_amount type + the refine() logic in categorize.ts:
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Investment - mine', note: 'shared IBAN, refined by amount/text' },
 
-  // ===== FAMILY =====
-  { match: { type: 'iban', value: 'SK9711000000002613042376' }, category: 'Family - Mama (MATI)', note: 'supporting mother' },
-  { match: { type: 'iban', value: 'SK0711000000002614444385' }, category: 'Lucia', note: 'wife - 1500 transfers' },
+  // ===== FAMILY / PARTNER =====
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Family', note: 'monthly support' },
+  // { match: { type: 'iban', value: 'SK...' }, category: 'Partner', note: 'monthly transfer' },
 
   // ===== PORN (Revolut, beneficiary mmbill) =====
   { match: { type: 'text', value: 'mmbill', account: 'revolut' }, category: 'Porn' },
 
-  // ===== SUBSCRIPTIONS / common merchants (Revolut + Tatra text) =====
+  // ===== SUBSCRIPTIONS =====
   { match: { type: 'text', value: 'spotify' }, category: 'Subscriptions' },
   { match: { type: 'text', value: 'netflix' }, category: 'Subscriptions' },
   { match: { type: 'text', value: 'dakboard' }, category: 'Subscriptions' },
@@ -121,20 +116,20 @@ export const SEED_RULES: SeedRule[] = [
   { match: { type: 'text', value: 'bao brothers' }, category: 'Food & Groceries' },
 ];
 
-// IBANs that are Jan's OWN accounts — movements to/from these are INTERNAL transfers
-// (kept visible, but excluded from spend/income totals).
+// ---- Your own account IBANs ----
+// Transfers to/from these are tagged "Internal transfer" and excluded from totals.
+// Add your own accounts here (savings, credit card, etc.).
 export const INTERNAL_OWN_IBANS: string[] = [
-  'SK0711000000002004005246', // kreditka (own credit card account)
+  // 'SK...',   // e.g. your credit card repayment account
 ];
 
-// Text markers that indicate an internal transfer (e.g. topping up Revolut from Tatra)
+// Text markers that indicate an internal transfer (e.g. topping up Revolut from Tatra).
 export const INTERNAL_TEXT_MARKERS: string[] = [
-  'revolut',          // Tatra -> Revolut top-ups (Dublin / Revolut**)
+  'revolut',
 ];
 
-// Large credits that are the house sale + mortgage repayment → internal, not income.
-// These are detected by being a Kredit on Tatra above this threshold from own-loan accounts.
+// Tatra transactions above this amount are treated as internal (house sale, large repayments).
 export const HOUSE_SALE_MIN_AMOUNT = 50000;
 
-// Income markers
+// Tatra cash deposit markers → "Income - business (vklad)"
 export const INCOME_VKLAD_MARKERS: string[] = ['vklad', 'vlastný vklad', 'vklad v hotovosti'];

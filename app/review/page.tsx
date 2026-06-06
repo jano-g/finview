@@ -6,7 +6,7 @@ const eur = (n: number) =>
 
 function guessKeyword(desc: string): string {
   const STOP = new Set([
-    'eur','usd','nakup','nákup','pos','int','gordulič','gordulic','jan','ján',
+    'eur','usd','nakup','nákup','pos','int',
     'dublin','tallinn','platba','tpp','sdd','the','and','spotreba','internet','card','payment',
   ]);
   const cleaned = (desc || '')

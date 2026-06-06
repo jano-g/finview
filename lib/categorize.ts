@@ -66,14 +66,14 @@ function applyRules(tx: ParsedTx, rules: RuleRow[]): string | null {
   return null;
 }
 
-// Investment IBAN is shared by "Investment - mine" and "Eliška sporenie".
-// Heuristic: ~350 EUR = Eliška sporenie, larger = mine. Reference text overrides.
+// If two purposes share one IBAN, refine() splits them by amount or description keyword.
+// Configure keywords and the amount threshold to match your own accounts.
 function refine(tx: ParsedTx, category: string): string {
   if (category === 'Investment - mine') {
     const d = tx.description.toLowerCase();
-    if (d.includes('eli') || d.includes('eliška') || d.includes('eliska') || d.includes('sporenie'))
-      return 'Investment - Eliška';
-    if (Math.abs(tx.amount) <= 400) return 'Investment - Eliška';
+    // Add your own keywords: e.g. if (d.includes('savings') || d.includes('child'))
+    if (d.includes('sporenie')) return 'Investment - savings';
+    if (Math.abs(tx.amount) <= 400) return 'Investment - savings';
   }
   return category;
 }

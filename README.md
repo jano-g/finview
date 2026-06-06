@@ -107,13 +107,13 @@ For each transaction the engine checks in this order:
 
 All seed data lives in `lib/rules.ts`. Edit freely.
 
-**Categories:** Belá · Utilities per property (Belá, Gorkého byt, Gorkého garzónka, Slnečnice) · Apartment per property · Insurance · Investment (mine + Eliška) · Family - Mama (MATI) · Lucia · Porn · Mortgage / Loans · Shopping · Food & Groceries · Transport · Subscriptions · Donations · Income - business (vklad) · Income - other · Internal transfer · Other · Uncategorized
+**Categories:** Property/summer house · Utilities per property · Apartment fees per property · Insurance · Investment · Family · Partner · Porn · Mortgage / Loans · Shopping · Food & Groceries · Transport · Subscriptions · Donations · Income - business (vklad) · Income - other · Internal transfer · Other · Uncategorized
 
 **Rule highlights:**
-- Belá: four specific IBANs (repairs, cleaning, gardener, water) + cleaning-lady name text
-- Utilities split by Tatra variable symbol (one IBAN, different VS per property)
-- Apartments split by variable symbol (blahobyt shared IBAN)
-- Investment IBAN shared by own investment and Eliška's savings — routed by amount ≤ €400 or "Eliška/sporenie" in description
+- Property/Belá: add IBANs for regular payees (repairs, cleaning, gardener, water)
+- Utilities split by Tatra variable symbol — one IBAN, different VS per property
+- Apartments split by variable symbol when a management company uses one IBAN for multiple properties
+- Investment: if two purposes share one IBAN, `refine()` in `categorize.ts` splits by amount threshold or description keyword
 - Subscriptions: Spotify, Netflix, Google, Apple, OpenAI, Anthropic, Dakboard, gym
 - Transport: Bolt, DPB, GoScooters
 - Food: Billa, Lidl, Tesco, Kaufland, Yeme, Bistro, Bao Brothers
