@@ -1,0 +1,12 @@
+services:
+  finview:
+    build: .
+    container_name: finview
+    ports:
+      - "3000:3000"
+    volumes:
+      # SQLite database persists on the host — survives container rebuilds
+      - ./data:/data
+    environment:
+      - DATA_DIR=/data
+    restart: unless-stopped
